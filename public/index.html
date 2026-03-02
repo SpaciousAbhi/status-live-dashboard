@@ -32,6 +32,9 @@
       <div class="card"><div class="k">Context Used</div><div class="v" id="used">...</div></div>
       <div class="card"><div class="k">Remaining Tokens</div><div class="v" id="left">...</div></div>
       <div class="card"><div class="k">Approx Session Load</div><div class="v" id="pct">...</div></div>
+      <div class="card"><div class="k">Session Quota (5h)</div><div class="v" id="sessionq">n/a</div></div>
+      <div class="card"><div class="k">Daily Quota</div><div class="v" id="dailyq">n/a</div></div>
+      <div class="card"><div class="k">API Rate Limit</div><div class="v" id="ratel">n/a</div></div>
     </div>
 
     <div class="grid">
@@ -55,6 +58,9 @@
         set('used', `${nf.format(j.inputTokens||0)} / ${nf.format(j.contextTokens||0)}`);
         set('left', nf.format(j.remaining||0));
         set('pct', `${j.percentUsed ?? 'n/a'}%`);
+        set('sessionq', j.sessionQuotaLeft==null ? 'n/a' : `${j.sessionQuotaLeft}% left`);
+        set('dailyq', j.dailyQuotaLeft==null ? 'n/a' : `${j.dailyQuotaLeft}% left`);
+        set('ratel', j.rateLimit ?? 'n/a');
         set('channels', (j.channelSummary||[]).join(' | ') || 'n/a');
 
         const ul = document.getElementById('models');
