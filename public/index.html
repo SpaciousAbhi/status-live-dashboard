@@ -5,40 +5,55 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Jarvis Live Status</title>
   <style>
-    :root { --bg:#0b1020; --card:#121933; --line:#2a3567; --txt:#e7edff; --muted:#9fb0e8; --ok:#49d68a; }
+    :root { --bg:#0b1020; --card:#121933; --line:#2a3567; --txt:#e7edff; --muted:#9fb0e8; --ok:#49d68a; --warn:#ffd166; --bad:#ff6b6b; }
     *{box-sizing:border-box}
     body{margin:0;background:radial-gradient(1200px 600px at 10% -10%,#23357d 0,#0b1020 55%);font-family:Inter,system-ui,Segoe UI,Roboto,sans-serif;color:var(--txt)}
-    .wrap{max-width:900px;margin:0 auto;padding:22px}
+    .wrap{max-width:980px;margin:0 auto;padding:20px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
     .title{font-size:28px;font-weight:800;letter-spacing:.3px}
     .sub{color:var(--muted);margin-top:6px}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-top:16px}
+    .badge{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:#1f2b57;border:1px solid #31407a;color:#c8d8ff;font-size:12px}
+    .dot{width:8px;height:8px;border-radius:50%}
+    .ok{background:var(--ok)} .warn{background:var(--warn)} .bad{background:var(--bad)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
     .card{background:linear-gradient(180deg,#141d3b,#101834);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
     .k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.7px}
     .v{margin-top:8px;font-size:22px;font-weight:700;word-break:break-word}
-    .badge{display:inline-block;padding:4px 9px;border-radius:999px;background:#1f2b57;border:1px solid #31407a;color:#bcd0ff;font-size:12px}
-    .ok{color:var(--ok)}
     .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.35}
-    .models{max-height:240px;overflow:auto;margin:0;padding-left:18px}
+    .models{max-height:180px;overflow:auto;margin:0;padding-left:18px}
+    .history{max-height:160px;overflow:auto;margin:0;padding-left:16px}
     .foot{margin-top:12px;color:var(--muted);font-size:12px}
+    canvas{width:100%;height:80px;background:#0c1330;border:1px solid #2b3768;border-radius:10px}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="title">Jarvis Live Status</div>
-    <div class="sub">Auto-refresh every 20s • Live status from AWS bridge</div>
+    <div class="top">
+      <div>
+        <div class="title">Jarvis Live Status</div>
+        <div class="sub">Auto-refresh every 20s • Live from AWS bridge</div>
+      </div>
+      <div class="badge"><span class="dot" id="dot"></span><span id="health">Checking…</span></div>
+    </div>
 
     <div class="grid">
       <div class="card"><div class="k">Current Model</div><div class="v" id="model">...</div></div>
       <div class="card"><div class="k">Context Used</div><div class="v" id="used">...</div></div>
       <div class="card"><div class="k">Remaining Tokens</div><div class="v" id="left">...</div></div>
       <div class="card"><div class="k">Context Window Used</div><div class="v" id="pct">...</div></div>
-      <div class="card"><div class="k">ChatGPT Quota (5h, estimated)</div><div class="v" id="sessionq">n/a</div></div>
-      <div class="card"><div class="k">ChatGPT Daily (estimated)</div><div class="v" id="dailyq">n/a</div></div>
+      <div class="card"><div class="k">ChatGPT Quota (5h, est)</div><div class="v" id="sessionq">n/a</div></div>
+      <div class="card"><div class="k">ChatGPT Daily (est)</div><div class="v" id="dailyq">n/a</div></div>
       <div class="card"><div class="k">API Rate Limit (if exposed)</div><div class="v" id="ratel">n/a</div></div>
+      <div class="card"><div class="k">Quota Updated</div><div class="v mono" id="qup">n/a</div></div>
     </div>
 
     <div class="grid">
+      <div class="card">
+        <div class="k">Context Usage Trend</div>
+        <canvas id="trend" width="420" height="80"></canvas>
+      </div>
       <div class="card"><div class="k">Channels</div><div class="v mono" id="channels">...</div></div>
+      <div class="card"><div class="k">Recent Updates</div><ul class="history mono" id="history"></ul></div>
       <div class="card"><div class="k">Available Models</div><ul class="models mono" id="models"></ul></div>
     </div>
 
@@ -47,7 +62,29 @@
 
   <script>
     const nf = new Intl.NumberFormat();
+    const trend = [];
     function set(id, v){ document.getElementById(id).textContent = v; }
+    function health(p){
+      const dot=document.getElementById('dot');
+      const h=document.getElementById('health');
+      if (p == null) { dot.className='dot warn'; h.textContent='No data'; return; }
+      if (p < 90) { dot.className='dot ok'; h.textContent='Healthy'; }
+      else if (p < 100) { dot.className='dot warn'; h.textContent='High context use'; }
+      else { dot.className='dot bad'; h.textContent='Context exhausted'; }
+    }
+    function drawTrend(){
+      const c=document.getElementById('trend'); const ctx=c.getContext('2d');
+      ctx.clearRect(0,0,c.width,c.height);
+      if (trend.length<2) return;
+      ctx.strokeStyle='#63e6be'; ctx.lineWidth=2; ctx.beginPath();
+      trend.forEach((v,i)=>{ const x=(i/(trend.length-1))*(c.width-8)+4; const y=(1-Math.min(100,Math.max(0,v))/100)*(c.height-10)+5; if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+      ctx.stroke();
+    }
+    function pushHistory(line){
+      const ul=document.getElementById('history');
+      const li=document.createElement('li'); li.textContent=line;
+      ul.prepend(li); while(ul.children.length>10) ul.removeChild(ul.lastChild);
+    }
     async function tick(){
       try{
         const r = await fetch('/api/status', {cache:'no-store'});
@@ -56,28 +93,27 @@
 
         set('model', j.model || 'unknown');
         set('used', `${nf.format(j.inputTokens||0)} / ${nf.format(j.contextTokens||0)}`);
-        set('left', nf.format(j.remaining||0)+' (context window)');
+        set('left', `${nf.format(j.remaining||0)} (context)`);
         set('pct', `${j.percentUsed ?? 'n/a'}%`);
         set('sessionq', j.sessionQuotaLeft==null ? 'n/a' : `${j.sessionQuotaLeft}% left`);
         set('dailyq', j.dailyQuotaLeft==null ? 'n/a' : `${j.dailyQuotaLeft}% left`);
         set('ratel', j.rateLimit ?? 'n/a');
+        set('qup', j.quotaUpdatedAt ? new Date(j.quotaUpdatedAt*1000).toLocaleString() : 'n/a');
         set('channels', (j.channelSummary||[]).join(' | ') || 'n/a');
 
-        const ul = document.getElementById('models');
-        ul.innerHTML = '';
-        (j.availableModels||[]).forEach(m => {
-          const li = document.createElement('li');
-          li.textContent = m;
-          ul.appendChild(li);
-        });
+        const ul = document.getElementById('models'); ul.innerHTML = '';
+        (j.availableModels||[]).forEach(m => { const li=document.createElement('li'); li.textContent=m; ul.appendChild(li); });
 
+        health(j.percentUsed);
+        trend.push(Number(j.percentUsed||0)); if(trend.length>30) trend.shift(); drawTrend();
+        pushHistory(`${new Date(j.now).toLocaleTimeString()} • model ${j.model} • ${j.percentUsed}% used`);
         set('ts', `Last update: ${new Date(j.now).toLocaleString()} • Quota source: ${j.quotaSource||'unknown'}`);
       }catch(e){
+        health(null);
         set('ts', `Error: ${e.message}`);
       }
     }
-    tick();
-    setInterval(tick, 20000);
+    tick(); setInterval(tick, 20000);
   </script>
 </body>
 </html>
