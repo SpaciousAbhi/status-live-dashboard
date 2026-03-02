@@ -3,125 +3,77 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Jarvis Live Status</title>
+  <title>Jarvis Mission Control</title>
   <style>
-    :root { --bg:#0b1020; --card:#121933; --line:#2a3567; --txt:#e7edff; --muted:#9fb0e8; --ok:#49d68a; --warn:#ffd166; --bad:#ff6b6b; }
-    *{box-sizing:border-box}
-    body{margin:0;background:radial-gradient(1200px 600px at 10% -10%,#23357d 0,#0b1020 55%);font-family:Inter,system-ui,Segoe UI,Roboto,sans-serif;color:var(--txt)}
-    .wrap{max-width:980px;margin:0 auto;padding:20px}
-    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
-    .title{font-size:28px;font-weight:800;letter-spacing:.3px}
-    .sub{color:var(--muted);margin-top:6px}
-    .badge{display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:999px;background:#1f2b57;border:1px solid #31407a;color:#c8d8ff;font-size:12px}
-    .dot{width:8px;height:8px;border-radius:50%}
-    .ok{background:var(--ok)} .warn{background:var(--warn)} .bad{background:var(--bad)}
-    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
-    .card{background:linear-gradient(180deg,#141d3b,#101834);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 8px 30px rgba(0,0,0,.25)}
-    .k{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.7px}
+    :root{--bg:#090d1a;--bg2:#111936;--card:#121a38;--line:#2a3a77;--txt:#edf2ff;--muted:#9cb0ef;--ok:#47d88f;--warn:#ffd166;--bad:#ff6b6b}
+    *{box-sizing:border-box} body{margin:0;color:var(--txt);font-family:Inter,system-ui;background:radial-gradient(1000px 500px at 20% -10%,#263a8f 0,#090d1a 60%)}
+    .wrap{max-width:1100px;margin:0 auto;padding:16px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .title{font-size:28px;font-weight:800}.sub{color:var(--muted);font-size:13px}
+    .badge{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#1a2551;font-size:12px}
+    .dot{width:8px;height:8px;border-radius:50%}.ok{background:var(--ok)}.warn{background:var(--warn)}.bad{background:var(--bad)}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin-top:12px}
+    .card{grid-column:span 3;background:linear-gradient(180deg,#141e43,#111936);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+    .wide{grid-column:span 6}.full{grid-column:span 12}
+    .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.7px}
     .v{margin-top:8px;font-size:22px;font-weight:700;word-break:break-word}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.35}
-    .models{max-height:180px;overflow:auto;margin:0;padding-left:18px}
-    .history{max-height:160px;overflow:auto;margin:0;padding-left:16px}
-    .foot{margin-top:12px;color:var(--muted);font-size:12px}
-    canvas{width:100%;height:80px;background:#0c1330;border:1px solid #2b3768;border-radius:10px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
+    ul{margin:8px 0 0 16px;padding:0}.list{max-height:210px;overflow:auto}
+    .foot{margin-top:10px;color:var(--muted);font-size:12px}
+    .bar{height:8px;border-radius:999px;background:#0c1230;border:1px solid #2c3d7d;overflow:hidden}.fill{height:100%;width:0%;background:linear-gradient(90deg,#5de2a2,#5db5ff)}
+    canvas{width:100%;height:80px;background:#0b1230;border:1px solid #2b3768;border-radius:10px}
+    @media (max-width:900px){.card{grid-column:span 6}.wide{grid-column:span 12}}
+    @media (max-width:640px){.card,.wide{grid-column:span 12}}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="top">
-      <div>
-        <div class="title">Jarvis Live Status</div>
-        <div class="sub">Auto-refresh every 20s • Live from AWS bridge</div>
-      </div>
-      <div class="badge"><span class="dot" id="dot"></span><span id="health">Checking…</span></div>
-    </div>
-
-    <div class="grid">
-      <div class="card"><div class="k">Current Model</div><div class="v" id="model">...</div></div>
-      <div class="card"><div class="k">Context Used</div><div class="v" id="used">...</div></div>
-      <div class="card"><div class="k">Remaining Tokens</div><div class="v" id="left">...</div></div>
-      <div class="card"><div class="k">Context Window Used</div><div class="v" id="pct">...</div></div>
-      <div class="card"><div class="k">ChatGPT Quota (5h, est)</div><div class="v" id="sessionq">n/a</div></div>
-      <div class="card"><div class="k">ChatGPT Daily (est)</div><div class="v" id="dailyq">n/a</div></div>
-      <div class="card"><div class="k">API Rate Limit (if exposed)</div><div class="v" id="ratel">n/a</div></div>
-      <div class="card"><div class="k">Quota Updated</div><div class="v mono" id="qup">n/a</div></div>
-    </div>
-
-    <div class="grid">
-      <div class="card">
-        <div class="k">Context Usage Trend</div>
-        <canvas id="trend" width="420" height="80"></canvas>
-      </div>
-      <div class="card"><div class="k">Channels</div><div class="v mono" id="channels">...</div></div>
-      <div class="card"><div class="k">Recent Updates</div><ul class="history mono" id="history"></ul></div>
-      <div class="card"><div class="k">Available Models</div><ul class="models mono" id="models"></ul></div>
-      <div class="card"><div class="k">Agents Live</div><ul class="models mono" id="agents"></ul></div>
-    </div>
-
-    <div class="foot" id="ts">Last update: ...</div>
+<div class="wrap">
+  <div class="top">
+    <div><div class="title">Jarvis Mission Control</div><div class="sub">Live status, agents, quota estimate • refresh 20s</div></div>
+    <div class="badge"><span class="dot" id="dot"></span><span id="health">Checking...</span></div>
   </div>
 
-  <script>
-    const nf = new Intl.NumberFormat();
-    const trend = [];
-    function set(id, v){ document.getElementById(id).textContent = v; }
-    function health(p){
-      const dot=document.getElementById('dot');
-      const h=document.getElementById('health');
-      if (p == null) { dot.className='dot warn'; h.textContent='No data'; return; }
-      if (p < 90) { dot.className='dot ok'; h.textContent='Healthy'; }
-      else if (p < 100) { dot.className='dot warn'; h.textContent='High context use'; }
-      else { dot.className='dot bad'; h.textContent='Context exhausted'; }
-    }
-    function drawTrend(){
-      const c=document.getElementById('trend'); const ctx=c.getContext('2d');
-      ctx.clearRect(0,0,c.width,c.height);
-      if (trend.length<2) return;
-      ctx.strokeStyle='#63e6be'; ctx.lineWidth=2; ctx.beginPath();
-      trend.forEach((v,i)=>{ const x=(i/(trend.length-1))*(c.width-8)+4; const y=(1-Math.min(100,Math.max(0,v))/100)*(c.height-10)+5; if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); });
-      ctx.stroke();
-    }
-    function pushHistory(line){
-      const ul=document.getElementById('history');
-      const li=document.createElement('li'); li.textContent=line;
-      ul.prepend(li); while(ul.children.length>10) ul.removeChild(ul.lastChild);
-    }
-    async function tick(){
-      try{
-        const r = await fetch('/api/status', {cache:'no-store'});
-        const j = await r.json();
-        if(!j.ok) throw new Error(j.error || 'status error');
+  <div class="grid">
+    <div class="card"><div class="k">Model</div><div class="v" id="model">...</div></div>
+    <div class="card"><div class="k">Context Used</div><div class="v" id="used">...</div></div>
+    <div class="card"><div class="k">Remaining</div><div class="v" id="left">...</div></div>
+    <div class="card"><div class="k">Window Used</div><div class="v" id="pct">...</div><div class="bar"><div class="fill" id="pctfill"></div></div></div>
 
-        set('model', j.model || 'unknown');
-        set('used', `${nf.format(j.inputTokens||0)} / ${nf.format(j.contextTokens||0)}`);
-        set('left', `${nf.format(j.remaining||0)} (context)`);
-        set('pct', `${j.percentUsed ?? 'n/a'}%`);
-        set('sessionq', j.sessionQuotaLeft==null ? 'n/a' : `${j.sessionQuotaLeft}% left`);
-        set('dailyq', j.dailyQuotaLeft==null ? 'n/a' : `${j.dailyQuotaLeft}% left`);
-        set('ratel', j.rateLimit ?? 'n/a');
-        set('qup', j.quotaUpdatedAt ? new Date(j.quotaUpdatedAt*1000).toLocaleString() : 'n/a');
-        set('channels', (j.channelSummary||[]).join(' | ') || 'n/a');
+    <div class="card"><div class="k">5h Quota (est)</div><div class="v" id="sessionq">n/a</div></div>
+    <div class="card"><div class="k">Daily Quota (est)</div><div class="v" id="dailyq">n/a</div></div>
+    <div class="card"><div class="k">API Rate Limit</div><div class="v" id="ratel">n/a</div></div>
+    <div class="card"><div class="k">Quota Updated</div><div class="v mono" id="qup">n/a</div></div>
 
-        const ul = document.getElementById('models'); ul.innerHTML = '';
-        (j.availableModels||[]).forEach(m => { const li=document.createElement('li'); li.textContent=m; ul.appendChild(li); });
+    <div class="card wide"><div class="k">Context Trend</div><canvas id="trend" width="600" height="90"></canvas></div>
+    <div class="card wide"><div class="k">Agents Live</div><ul class="list mono" id="agents"></ul></div>
 
-        health(j.percentUsed);
-        trend.push(Number(j.percentUsed||0)); if(trend.length>30) trend.shift(); drawTrend();
-        pushHistory(`${new Date(j.now).toLocaleTimeString()} • model ${j.model} • ${j.percentUsed}% used`);
-        set('ts', `Last update: ${new Date(j.now).toLocaleString()} • Quota source: ${j.quotaSource||'unknown'}`);
-        try {
-          const ar = await fetch('/api/agents', {cache:'no-store'});
-          const aj = await ar.json();
-          const aul = document.getElementById('agents');
-          aul.innerHTML='';
-          (aj.agents||[]).forEach(a=>{const li=document.createElement('li'); li.textContent=`${a.key.split(':').slice(-2).join(':')} • ${Math.floor((a.ageMs||0)/1000)}s ago • ${a.model}`; aul.appendChild(li);});
-        } catch {}
-      }catch(e){
-        health(null);
-        set('ts', `Error: ${e.message}`);
-      }
-    }
-    tick(); setInterval(tick, 20000);
-  </script>
+    <div class="card wide"><div class="k">Channels</div><div class="v mono" id="channels">...</div></div>
+    <div class="card wide"><div class="k">Recent Updates</div><ul class="list mono" id="history"></ul></div>
+  </div>
+
+  <div class="foot" id="ts">Last update: ...</div>
+</div>
+<script>
+const nf=new Intl.NumberFormat(); const trend=[];
+const set=(id,v)=>document.getElementById(id).textContent=v;
+function health(p){const d=document.getElementById('dot'),h=document.getElementById('health'); if(p==null){d.className='dot warn';h.textContent='No data';return;} if(p<90){d.className='dot ok';h.textContent='Healthy';} else if(p<100){d.className='dot warn';h.textContent='High usage';} else {d.className='dot bad';h.textContent='Context exhausted';}}
+function draw(){const c=document.getElementById('trend'),x=c.getContext('2d');x.clearRect(0,0,c.width,c.height); if(trend.length<2)return; x.strokeStyle='#60e6c0'; x.lineWidth=2; x.beginPath(); trend.forEach((v,i)=>{const px=(i/(trend.length-1))*(c.width-10)+5; const py=(1-Math.min(100,Math.max(0,v))/100)*(c.height-10)+5; i?x.lineTo(px,py):x.moveTo(px,py)}); x.stroke();}
+function pushHist(t){const ul=document.getElementById('history'); const li=document.createElement('li'); li.textContent=t; ul.prepend(li); while(ul.children.length>14) ul.removeChild(ul.lastChild)}
+async function tick(){
+  try{
+    const r=await fetch('/api/status',{cache:'no-store'}); const j=await r.json(); if(!j.ok) throw new Error(j.error||'status error');
+    set('model',j.model||'unknown'); set('used',`${nf.format(j.inputTokens||0)} / ${nf.format(j.contextTokens||0)}`); set('left',`${nf.format(j.remaining||0)} (context)`);
+    const p=Number(j.percentUsed||0); set('pct',`${p}%`); document.getElementById('pctfill').style.width=Math.max(0,Math.min(100,p))+'%';
+    set('sessionq',j.sessionQuotaLeft==null?'n/a':`${j.sessionQuotaLeft}% left`); set('dailyq',j.dailyQuotaLeft==null?'n/a':`${j.dailyQuotaLeft}% left`); set('ratel',j.rateLimit||'n/a');
+    set('qup',j.quotaUpdatedAt?new Date(j.quotaUpdatedAt*1000).toLocaleString():'n/a'); set('channels',(j.channelSummary||[]).join(' | ')||'n/a');
+    health(p); trend.push(p); if(trend.length>40)trend.shift(); draw(); pushHist(`${new Date(j.now).toLocaleTimeString()} • ${j.model} • ${p}% used`);
+
+    try { const ar=await fetch('/api/agents',{cache:'no-store'}); const aj=await ar.json(); const ul=document.getElementById('agents'); ul.innerHTML=''; (aj.agents||[]).forEach(a=>{const li=document.createElement('li'); li.textContent=`${a.key} • ${Math.floor((a.ageMs||0)/1000)}s ago • ${a.model}`; ul.appendChild(li);}); } catch {}
+
+    set('ts',`Last update: ${new Date(j.now).toLocaleString()} • Quota source: ${j.quotaSource||'unknown'}`);
+  }catch(e){health(null); set('ts',`Error: ${e.message}`)}
+}
+tick(); setInterval(tick,20000);
+</script>
 </body>
 </html>
