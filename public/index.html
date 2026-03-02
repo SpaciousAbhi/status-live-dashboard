@@ -55,6 +55,7 @@
       <div class="card"><div class="k">Channels</div><div class="v mono" id="channels">...</div></div>
       <div class="card"><div class="k">Recent Updates</div><ul class="history mono" id="history"></ul></div>
       <div class="card"><div class="k">Available Models</div><ul class="models mono" id="models"></ul></div>
+      <div class="card"><div class="k">Agents Live</div><ul class="models mono" id="agents"></ul></div>
     </div>
 
     <div class="foot" id="ts">Last update: ...</div>
@@ -108,6 +109,13 @@
         trend.push(Number(j.percentUsed||0)); if(trend.length>30) trend.shift(); drawTrend();
         pushHistory(`${new Date(j.now).toLocaleTimeString()} • model ${j.model} • ${j.percentUsed}% used`);
         set('ts', `Last update: ${new Date(j.now).toLocaleString()} • Quota source: ${j.quotaSource||'unknown'}`);
+        try {
+          const ar = await fetch('/api/agents', {cache:'no-store'});
+          const aj = await ar.json();
+          const aul = document.getElementById('agents');
+          aul.innerHTML='';
+          (aj.agents||[]).forEach(a=>{const li=document.createElement('li'); li.textContent=`${a.key.split(':').slice(-2).join(':')} • ${Math.floor((a.ageMs||0)/1000)}s ago • ${a.model}`; aul.appendChild(li);});
+        } catch {}
       }catch(e){
         health(null);
         set('ts', `Error: ${e.message}`);
