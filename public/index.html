@@ -25,16 +25,16 @@
 <body>
   <div class="wrap">
     <div class="title">Jarvis Live Status</div>
-    <div class="sub">Auto-refresh every 20s</div>
+    <div class="sub">Auto-refresh every 20s • Live status from AWS bridge</div>
 
     <div class="grid">
       <div class="card"><div class="k">Current Model</div><div class="v" id="model">...</div></div>
       <div class="card"><div class="k">Context Used</div><div class="v" id="used">...</div></div>
       <div class="card"><div class="k">Remaining Tokens</div><div class="v" id="left">...</div></div>
-      <div class="card"><div class="k">Approx Session Load</div><div class="v" id="pct">...</div></div>
-      <div class="card"><div class="k">Session Quota (5h)</div><div class="v" id="sessionq">n/a</div></div>
-      <div class="card"><div class="k">Daily Quota</div><div class="v" id="dailyq">n/a</div></div>
-      <div class="card"><div class="k">API Rate Limit</div><div class="v" id="ratel">n/a</div></div>
+      <div class="card"><div class="k">Context Window Used</div><div class="v" id="pct">...</div></div>
+      <div class="card"><div class="k">ChatGPT Quota (5h, estimated)</div><div class="v" id="sessionq">n/a</div></div>
+      <div class="card"><div class="k">ChatGPT Daily (estimated)</div><div class="v" id="dailyq">n/a</div></div>
+      <div class="card"><div class="k">API Rate Limit (if exposed)</div><div class="v" id="ratel">n/a</div></div>
     </div>
 
     <div class="grid">
@@ -56,7 +56,7 @@
 
         set('model', j.model || 'unknown');
         set('used', `${nf.format(j.inputTokens||0)} / ${nf.format(j.contextTokens||0)}`);
-        set('left', nf.format(j.remaining||0));
+        set('left', nf.format(j.remaining||0)+' (context window)');
         set('pct', `${j.percentUsed ?? 'n/a'}%`);
         set('sessionq', j.sessionQuotaLeft==null ? 'n/a' : `${j.sessionQuotaLeft}% left`);
         set('dailyq', j.dailyQuotaLeft==null ? 'n/a' : `${j.dailyQuotaLeft}% left`);
@@ -71,7 +71,7 @@
           ul.appendChild(li);
         });
 
-        set('ts', `Last update: ${new Date(j.now).toLocaleString()}`);
+        set('ts', `Last update: ${new Date(j.now).toLocaleString()} • Quota source: ${j.quotaSource||'unknown'}`);
       }catch(e){
         set('ts', `Error: ${e.message}`);
       }
