@@ -25,19 +25,18 @@ function run(cmd) {
   });
 }
 
-function safeJsonParse(v, fallback = {}) {
-  try { return JSON.parse(v); } catch { return fallback; }
-}
+function safeJsonParse(v, fallback = {}) { try { return JSON.parse(v); } catch { return fallback; } }
+function isUuid(v) { return /^[0-9a-fA-F-]{8,}$/.test(String(v || '')); }
 
-function isUuid(v) {
-  return /^[0-9a-fA-F-]{8,}$/.test(String(v || ''));
+async function detectOpenclaw() {
+  try {
+    const out = await run('command -v openclaw || true');
+    return !!out.trim();
+  } catch { return false; }
 }
 
 function requireControlAuth(req, res, next) {
-  if (!DASHBOARD_TOKEN) {
-    // If token is unset, stay safe by blocking mutating endpoints.
-    return res.status(503).json({ ok: false, error: 'DASHBOARD_TOKEN not configured on server' });
-  }
+  if (!DASHBOARD_TOKEN) return res.status(503).json({ ok: false, error: 'DASHBOARD_TOKEN not configured on server' });
   const incoming = req.headers['x-dashboard-token'] || '';
   if (incoming !== DASHBOARD_TOKEN) return res.status(401).json({ ok: false, error: 'unauthorized' });
   next();
@@ -61,10 +60,8 @@ function summarizeMission() {
   return { targetSubs: TARGET_SUBS, currentSubs: CURRENT_SUBS, planDays: PLAN_DAYS, daysLeft, neededPerDay, progressPct };
 }
 
-async function getCronList() {
-  const out = await run('openclaw cron list --json');
-  const j = safeJsonParse(out, { jobs: [] });
-  return (j.jobs || []).map((x) => {
+function normalizeCronJobs(jobs) {
+  return (jobs || []).map((x) => {
     const state = x.state || {};
     return {
       id: x.id,
@@ -82,14 +79,43 @@ async function getCronList() {
 
 app.get('/api/status', async (_req, res) => {
   try {
+    const openclawAvailable = await detectOpenclaw();
+
     let bridge = null;
-    try { bridge = await getBridgeStatus(); } catch {}
+    let bridgeError = null;
+    try { bridge = await getBridgeStatus(); } catch (e) { bridgeError = String(e.message || e); }
 
-    const out = await run('openclaw status --json');
-    const status = safeJsonParse(out, {});
-    const recent = (status?.sessions?.recent || []).slice(0, 10);
+    let status = {};
+    let statusError = null;
+    let recent = [];
+    if (openclawAvailable) {
+      try {
+        const out = await run('openclaw status --json');
+        status = safeJsonParse(out, {});
+        recent = (status?.sessions?.recent || []).slice(0, 10);
+      } catch (e) {
+        statusError = String(e.message || e);
+      }
+    } else {
+      statusError = 'openclaw CLI unavailable in this runtime';
+    }
 
-    res.json({ ok: true, now: Date.now(), bridge, status, recent, mission: summarizeMission(), controlSecured: !!DASHBOARD_TOKEN });
+    const model = bridge?.model || status?.sessions?.defaults?.model || 'unknown';
+    const payload = {
+      ok: true,
+      now: Date.now(),
+      bridge,
+      bridgeError,
+      status,
+      statusError,
+      recent,
+      mission: summarizeMission(),
+      controlSecured: !!DASHBOARD_TOKEN,
+      openclawAvailable,
+      model,
+    };
+
+    res.json(payload);
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e.message || e) });
   }
@@ -97,7 +123,13 @@ app.get('/api/status', async (_req, res) => {
 
 app.get('/api/cron', async (_req, res) => {
   try {
-    const jobs = await getCronList();
+    const openclawAvailable = await detectOpenclaw();
+    if (!openclawAvailable) {
+      return res.json({ ok: true, now: Date.now(), active: 0, errors: 0, jobs: [], warning: 'openclaw CLI unavailable in this runtime' });
+    }
+    const out = await run('openclaw cron list --json');
+    const j = safeJsonParse(out, { jobs: [] });
+    const jobs = normalizeCronJobs(j.jobs || []);
     const active = jobs.filter((j) => j.enabled).length;
     const errors = jobs.filter((j) => j.lastStatus === 'error' || j.consecutiveErrors > 0).length;
     res.json({ ok: true, now: Date.now(), active, errors, jobs });
@@ -106,8 +138,18 @@ app.get('/api/cron', async (_req, res) => {
   }
 });
 
+async function guardControlRuntime(res) {
+  const openclawAvailable = await detectOpenclaw();
+  if (!openclawAvailable) {
+    res.status(503).json({ ok: false, error: 'openclaw CLI unavailable in this runtime (control actions disabled)' });
+    return false;
+  }
+  return true;
+}
+
 app.post('/api/control/cron/:id/run', requireControlAuth, async (req, res) => {
   try {
+    if (!(await guardControlRuntime(res))) return;
     const id = req.params.id;
     if (!isUuid(id)) return res.status(400).json({ ok: false, error: 'invalid job id' });
     const out = await run(`openclaw cron run ${id}`);
@@ -119,6 +161,7 @@ app.post('/api/control/cron/:id/run', requireControlAuth, async (req, res) => {
 
 app.post('/api/control/cron/:id/enable', requireControlAuth, async (req, res) => {
   try {
+    if (!(await guardControlRuntime(res))) return;
     const id = req.params.id;
     if (!isUuid(id)) return res.status(400).json({ ok: false, error: 'invalid job id' });
     await run(`openclaw cron enable ${id}`);
@@ -130,6 +173,7 @@ app.post('/api/control/cron/:id/enable', requireControlAuth, async (req, res) =>
 
 app.post('/api/control/cron/:id/disable', requireControlAuth, async (req, res) => {
   try {
+    if (!(await guardControlRuntime(res))) return;
     const id = req.params.id;
     if (!isUuid(id)) return res.status(400).json({ ok: false, error: 'invalid job id' });
     await run(`openclaw cron disable ${id}`);
@@ -141,6 +185,7 @@ app.post('/api/control/cron/:id/disable', requireControlAuth, async (req, res) =
 
 app.post('/api/control/gateway/restart', requireControlAuth, async (_req, res) => {
   try {
+    if (!(await guardControlRuntime(res))) return;
     const out = await run('openclaw gateway restart');
     res.json({ ok: true, output: out.slice(0, 4000) });
   } catch (e) {
