@@ -3,77 +3,200 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Jarvis Mission Control</title>
+  <title>VenomStone Command Center</title>
   <style>
-    :root{--bg:#090d1a;--bg2:#111936;--card:#121a38;--line:#2a3a77;--txt:#edf2ff;--muted:#9cb0ef;--ok:#47d88f;--warn:#ffd166;--bad:#ff6b6b}
-    *{box-sizing:border-box} body{margin:0;color:var(--txt);font-family:Inter,system-ui;background:radial-gradient(1000px 500px at 20% -10%,#263a8f 0,#090d1a 60%)}
-    .wrap{max-width:1100px;margin:0 auto;padding:16px}
-    .top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-    .title{font-size:28px;font-weight:800}.sub{color:var(--muted);font-size:13px}
-    .badge{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border:1px solid var(--line);border-radius:999px;background:#1a2551;font-size:12px}
-    .dot{width:8px;height:8px;border-radius:50%}.ok{background:var(--ok)}.warn{background:var(--warn)}.bad{background:var(--bad)}
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin-top:12px}
-    .card{grid-column:span 3;background:linear-gradient(180deg,#141e43,#111936);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,.3)}
+    :root{--bg:#070b16;--card:#0f172a;--line:#26365f;--txt:#e8efff;--muted:#9fb2e1;--ok:#34d399;--warn:#fbbf24;--bad:#fb7185;--brand:#60a5fa}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto;background:radial-gradient(1000px 400px at 20% -10%,#1f3b84 0,#070b16 55%);color:var(--txt)}
+    .wrap{max-width:1250px;margin:0 auto;padding:18px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+    h1{margin:0;font-size:30px}
+    .sub{color:var(--muted);font-size:13px;margin-top:4px}
+    .pill{display:inline-flex;align-items:center;gap:8px;background:#121d3f;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:12px}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .ok{background:var(--ok)} .warn{background:var(--warn)} .bad{background:var(--bad)}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px;margin-top:14px}
+    .card{grid-column:span 3;background:linear-gradient(180deg,#111b37,#0f172a);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 12px 30px rgba(0,0,0,.25)}
     .wide{grid-column:span 6}.full{grid-column:span 12}
-    .k{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.7px}
-    .v{margin-top:8px;font-size:22px;font-weight:700;word-break:break-word}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px}
-    ul{margin:8px 0 0 16px;padding:0}.list{max-height:210px;overflow:auto}
-    .foot{margin-top:10px;color:var(--muted);font-size:12px}
-    .bar{height:8px;border-radius:999px;background:#0c1230;border:1px solid #2c3d7d;overflow:hidden}.fill{height:100%;width:0%;background:linear-gradient(90deg,#5de2a2,#5db5ff)}
-    canvas{width:100%;height:80px;background:#0b1230;border:1px solid #2b3768;border-radius:10px}
-    @media (max-width:900px){.card{grid-column:span 6}.wide{grid-column:span 12}}
-    @media (max-width:640px){.card,.wide{grid-column:span 12}}
+    .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+    .v{font-size:24px;font-weight:800;margin-top:8px}
+    .small{font-size:12px;color:var(--muted)}
+    .bar{height:10px;border-radius:999px;background:#0a1230;border:1px solid #2a3e75;overflow:hidden;margin-top:8px}
+    .fill{height:100%;background:linear-gradient(90deg,#60a5fa,#34d399);width:0%}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{padding:9px;border-bottom:1px solid #1f2d52;text-align:left}
+    th{color:var(--muted);font-weight:600}
+    .tag{display:inline-block;padding:3px 8px;border-radius:999px;font-size:11px;border:1px solid var(--line)}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+    ul{margin:8px 0 0 18px;padding:0;max-height:220px;overflow:auto}
+    canvas{width:100%;height:90px;background:#0b1230;border:1px solid #2a3f74;border-radius:10px}
+    @media (max-width:1000px){.card{grid-column:span 6}.wide{grid-column:span 12}}
+    @media (max-width:680px){.card,.wide{grid-column:span 12}}
   </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
-    <div><div class="title">Jarvis Mission Control</div><div class="sub">Live status, agents, quota estimate • refresh 20s</div></div>
-    <div class="badge"><span class="dot" id="dot"></span><span id="health">Checking...</span></div>
+    <div>
+      <h1>⚡ VenomStone Command Center</h1>
+      <div class="sub">24x7 crypto automation cockpit • brief, informative, human-tone content engine</div>
+    </div>
+    <div class="pill"><span id="dot" class="dot warn"></span><span id="health">Starting…</span></div>
   </div>
 
   <div class="grid">
-    <div class="card"><div class="k">Model</div><div class="v" id="model">...</div></div>
-    <div class="card"><div class="k">Context Used</div><div class="v" id="used">...</div></div>
-    <div class="card"><div class="k">Remaining</div><div class="v" id="left">...</div></div>
-    <div class="card"><div class="k">Window Used</div><div class="v" id="pct">...</div><div class="bar"><div class="fill" id="pctfill"></div></div></div>
+    <div class="card">
+      <div class="k">Mission Target</div><div class="v" id="targetSubs">100,000</div>
+      <div class="small">Subscribers in 1 year</div>
+    </div>
+    <div class="card">
+      <div class="k">Current Subs</div><div class="v" id="currentSubs">Set env</div>
+      <div class="small" id="neededPerDay">Need/day: n/a</div>
+    </div>
+    <div class="card">
+      <div class="k">Days Left</div><div class="v" id="daysLeft">...</div>
+      <div class="small" id="progressPct">Progress: n/a</div>
+    </div>
+    <div class="card">
+      <div class="k">Primary Model</div><div class="v" id="model">...</div>
+      <div class="small">OpenClaw live context</div>
+    </div>
 
-    <div class="card"><div class="k">5h Quota (est)</div><div class="v" id="sessionq">n/a</div></div>
-    <div class="card"><div class="k">Daily Quota (est)</div><div class="v" id="dailyq">n/a</div></div>
-    <div class="card"><div class="k">API Rate Limit</div><div class="v" id="ratel">n/a</div></div>
-    <div class="card"><div class="k">Quota Updated</div><div class="v mono" id="qup">n/a</div></div>
+    <div class="card">
+      <div class="k">Context Used</div><div class="v" id="ctxUsed">...</div>
+      <div class="bar"><div id="ctxFill" class="fill"></div></div>
+    </div>
+    <div class="card">
+      <div class="k">5h Quota Left</div><div class="v" id="q5">n/a</div>
+      <div class="small">Bridge feed</div>
+    </div>
+    <div class="card">
+      <div class="k">Daily Quota Left</div><div class="v" id="qd">n/a</div>
+      <div class="small">Bridge feed</div>
+    </div>
+    <div class="card">
+      <div class="k">Rate Limit</div><div class="v" id="rl">n/a</div>
+      <div class="small" id="quotaTime">Quota update: n/a</div>
+    </div>
 
-    <div class="card wide"><div class="k">Context Trend</div><canvas id="trend" width="600" height="90"></canvas></div>
-    <div class="card wide"><div class="k">Agents Live</div><ul class="list mono" id="agents"></ul></div>
+    <div class="card wide">
+      <div class="k">Context Trend</div>
+      <canvas id="trend" width="640" height="95"></canvas>
+    </div>
+    <div class="card wide">
+      <div class="k">Recent Session Activity</div>
+      <ul id="recent" class="mono"></ul>
+    </div>
 
-    <div class="card wide"><div class="k">Channels</div><div class="v mono" id="channels">...</div></div>
-    <div class="card wide"><div class="k">Recent Updates</div><ul class="list mono" id="history"></ul></div>
+    <div class="card full">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+        <div class="k">Automation Jobs</div>
+        <div class="small">Active: <b id="cronActive">0</b> • Errors: <b id="cronErrors">0</b></div>
+      </div>
+      <div style="overflow:auto;margin-top:8px">
+        <table>
+          <thead><tr><th>Name</th><th>Status</th><th>Errors</th><th>Next Run</th><th>Delivery</th></tr></thead>
+          <tbody id="cronRows"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
-  <div class="foot" id="ts">Last update: ...</div>
+  <div class="small" id="ts" style="margin-top:10px">Last update: ...</div>
 </div>
+
 <script>
-const nf=new Intl.NumberFormat(); const trend=[];
-const set=(id,v)=>document.getElementById(id).textContent=v;
-function health(p){const d=document.getElementById('dot'),h=document.getElementById('health'); if(p==null){d.className='dot warn';h.textContent='No data';return;} if(p<90){d.className='dot ok';h.textContent='Healthy';} else if(p<100){d.className='dot warn';h.textContent='High usage';} else {d.className='dot bad';h.textContent='Context exhausted';}}
-function draw(){const c=document.getElementById('trend'),x=c.getContext('2d');x.clearRect(0,0,c.width,c.height); if(trend.length<2)return; x.strokeStyle='#60e6c0'; x.lineWidth=2; x.beginPath(); trend.forEach((v,i)=>{const px=(i/(trend.length-1))*(c.width-10)+5; const py=(1-Math.min(100,Math.max(0,v))/100)*(c.height-10)+5; i?x.lineTo(px,py):x.moveTo(px,py)}); x.stroke();}
-function pushHist(t){const ul=document.getElementById('history'); const li=document.createElement('li'); li.textContent=t; ul.prepend(li); while(ul.children.length>14) ul.removeChild(ul.lastChild)}
-async function tick(){
-  try{
-    const r=await fetch('/api/status',{cache:'no-store'}); const j=await r.json(); if(!j.ok) throw new Error(j.error||'status error');
-    set('model',j.model||'unknown'); set('used',`${nf.format(j.inputTokens||0)} / ${nf.format(j.contextTokens||0)}`); set('left',`${nf.format(j.remaining||0)} (context)`);
-    const p=Number(j.percentUsed||0); set('pct',`${p}%`); document.getElementById('pctfill').style.width=Math.max(0,Math.min(100,p))+'%';
-    set('sessionq',j.sessionQuotaLeft==null?'n/a':`${j.sessionQuotaLeft}% left`); set('dailyq',j.dailyQuotaLeft==null?'n/a':`${j.dailyQuotaLeft}% left`); set('ratel',j.rateLimit||'n/a');
-    set('qup',j.quotaUpdatedAt?new Date(j.quotaUpdatedAt*1000).toLocaleString():'n/a'); set('channels',(j.channelSummary||[]).join(' | ')||'n/a');
-    health(p); trend.push(p); if(trend.length>40)trend.shift(); draw(); pushHist(`${new Date(j.now).toLocaleTimeString()} • ${j.model} • ${p}% used`);
+  const trend=[];
+  const set=(id,v)=>document.getElementById(id).textContent=v;
+  const nf=new Intl.NumberFormat();
 
-    try { const ar=await fetch('/api/agents',{cache:'no-store'}); const aj=await ar.json(); const ul=document.getElementById('agents'); ul.innerHTML=''; (aj.agents||[]).forEach(a=>{const li=document.createElement('li'); li.textContent=`${a.key} • ${Math.floor((a.ageMs||0)/1000)}s ago • ${a.model}`; ul.appendChild(li);}); } catch {}
+  function statePill(level,text){
+    const dot=document.getElementById('dot');
+    dot.className='dot '+level;
+    set('health',text);
+  }
 
-    set('ts',`Last update: ${new Date(j.now).toLocaleString()} • Quota source: ${j.quotaSource||'unknown'}`);
-  }catch(e){health(null); set('ts',`Error: ${e.message}`)}
-}
-tick(); setInterval(tick,20000);
+  function drawTrend(){
+    const c=document.getElementById('trend');
+    const x=c.getContext('2d');
+    x.clearRect(0,0,c.width,c.height);
+    if(trend.length<2) return;
+    x.lineWidth=2; x.strokeStyle='#60a5fa'; x.beginPath();
+    trend.forEach((v,i)=>{
+      const px=(i/(trend.length-1))*(c.width-12)+6;
+      const py=(1-Math.max(0,Math.min(100,v))/100)*(c.height-12)+6;
+      i?x.lineTo(px,py):x.moveTo(px,py);
+    });
+    x.stroke();
+  }
+
+  function fmtTs(ms){
+    if(!ms) return '—';
+    return new Date(ms).toLocaleString();
+  }
+
+  async function load(){
+    try {
+      const [s, c] = await Promise.all([
+        fetch('/api/status',{cache:'no-store'}).then(r=>r.json()),
+        fetch('/api/cron',{cache:'no-store'}).then(r=>r.json())
+      ]);
+      if(!s.ok) throw new Error(s.error||'status failed');
+      if(!c.ok) throw new Error(c.error||'cron failed');
+
+      const b=s.bridge||{};
+      const mission=s.mission||{};
+      const recent=s.recent||[];
+
+      set('targetSubs', nf.format(mission.targetSubs||100000));
+      set('currentSubs', mission.currentSubs==null ? 'Set env' : nf.format(mission.currentSubs));
+      set('daysLeft', mission.daysLeft ?? '—');
+      set('neededPerDay', mission.neededPerDay==null ? 'Need/day: set CURRENT_SUBS env' : `Need/day: ${mission.neededPerDay}`);
+      set('progressPct', mission.progressPct==null ? 'Progress: n/a' : `Progress: ${mission.progressPct}%`);
+
+      set('model', b.model || s.status?.sessions?.defaults?.model || 'unknown');
+      const used = Number(b.percentUsed || recent[0]?.percentUsed || 0);
+      set('ctxUsed', `${used}%`);
+      document.getElementById('ctxFill').style.width=Math.max(0,Math.min(100,used))+'%';
+      set('q5', b.sessionQuotaLeft==null ? 'n/a' : `${b.sessionQuotaLeft}%`);
+      set('qd', b.dailyQuotaLeft==null ? 'n/a' : `${b.dailyQuotaLeft}%`);
+      set('rl', b.rateLimit || 'n/a');
+      set('quotaTime', b.quotaUpdatedAt ? `Quota update: ${new Date(b.quotaUpdatedAt*1000).toLocaleString()}` : 'Quota update: n/a');
+
+      trend.push(used); if(trend.length>60) trend.shift(); drawTrend();
+
+      const recUl=document.getElementById('recent'); recUl.innerHTML='';
+      recent.slice(0,8).forEach(r=>{
+        const li=document.createElement('li');
+        li.textContent=`${r.kind||'session'} • ${r.model||'unknown'} • ${r.percentUsed ?? '?'}% used • ${Math.floor((r.age||0)/1000)}s ago`;
+        recUl.appendChild(li);
+      });
+
+      set('cronActive', c.active||0);
+      set('cronErrors', c.errors||0);
+      const tbody=document.getElementById('cronRows'); tbody.innerHTML='';
+      c.jobs.sort((a,b)=>(a.nextRunAtMs||0)-(b.nextRunAtMs||0)).forEach(j=>{
+        const tr=document.createElement('tr');
+        const status = j.lastStatus || '-';
+        const stClass = status==='ok'?'ok':(status==='error'?'bad':'warn');
+        const del = `${j.delivery?.channel||'n/a'}:${j.delivery?.to||j.delivery?.mode||'n/a'}`;
+        tr.innerHTML = `<td class="mono">${j.name}</td><td><span class="tag ${stClass}">${status}</span></td><td>${j.consecutiveErrors||0}</td><td>${fmtTs(j.nextRunAtMs)}</td><td class="mono">${del}</td>`;
+        tbody.appendChild(tr);
+      });
+
+      if((c.errors||0)>0 || used>=100) statePill('bad','Needs attention');
+      else if(used>=85) statePill('warn','High load');
+      else statePill('ok','Healthy');
+
+      set('ts', `Last update: ${new Date(s.now).toLocaleString()} • Auto-refresh: 15s`);
+    } catch (e) {
+      statePill('bad','Offline/Error');
+      set('ts', `Error: ${e.message}`);
+    }
+  }
+
+  load();
+  setInterval(load, 15000);
 </script>
 </body>
 </html>
